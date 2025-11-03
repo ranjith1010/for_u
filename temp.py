@@ -1,38 +1,39 @@
+import pandas as pd
+from sklearn.model_selection import train_test_split
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
 from sklearn.pipeline import Pipeline
+from sklearn.metrics import classification_report, confusion_matrix
 
-pipeline = Pipeline([
-    ('tfidf', TfidfVectorizer(ngram_range=(1,2))),
-    ('clf', LogisticRegression())
+# 1. Load your CSV
+# Example: discrepancy_text,label
+df = pd.read_csv("discrepancies.csv")
+
+# 2. Clean data
+df.dropna(subset=['discrepancy_text', 'label'], inplace=True)
+
+# 3. Train-test split
+X_train, X_test, y_train, y_test = train_test_split(
+    df["discrepancy_text"],
+    df["label"],
+    test_size=0.2,
+    random_state=42
+)
+
+# 4. Create model pipeline
+model = Pipeline([
+    ('tfidf', TfidfVectorizer(ngram_range=(1,2), stop_words='english')),
+    ('clf', LogisticRegression(max_iter=200))
 ])
 
-pipeline.fit(train_texts, train_labels)
-preds = pipeline.predict(test_texts)
+# 5. Train
+model.fit(X_train, y_train)
 
+# 6. Evaluate
+preds = model.predict(X_test)
+print(classification_report(y_test, preds))
+print(confusion_matrix(y_test, preds))
 
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, Trainer, TrainingArguments
-from datasets import Dataset
-
-# Prepare data
-data = Dataset.from_dict({"text": texts, "label": labels})
-tokenizer = AutoTokenizer.from_pretrained("distilbert-base-uncased")
-
-def tokenize(batch):
-    return tokenizer(batch["text"], padding=True, truncation=True)
-
-tokenized = data.map(tokenize, batched=True)
-
-# Train-test split
-train_test = tokenized.train_test_split(test_size=0.2)
-train_set, test_set = train_test["train"], train_test["test"]
-
-# Model
-model = AutoModelForSequenceClassification.from_pretrained("distilbert-base-uncased", num_labels=2)
-
-# Fine-tune
-args = TrainingArguments(output_dir="./results", evaluation_strategy="epoch", num_train_epochs=3)
-trainer = Trainer(model=model, args=args, train_dataset=train_set, eval_dataset=test_set)
-trainer.train()
-
-
+# 7. Example prediction
+sample = ["Total amount in grid does not match invoice total"]
+print(model.predict(sample))
