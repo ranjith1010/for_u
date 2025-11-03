@@ -37,3 +37,17 @@ print(confusion_matrix(y_test, preds))
 # 7. Example prediction
 sample = ["Total amount in grid does not match invoice total"]
 print(model.predict(sample))
+
+import skl2onnx
+from skl2onnx import convert_sklearn
+from skl2onnx.common.data_types import StringTensorType
+
+# Define input type (string text input)
+initial_type = [('input', StringTensorType([None, 1]))]
+
+# Convert model
+onnx_model = convert_sklearn(model, initial_types=initial_type)
+
+# Save to file
+with open("discrepancy_model.onnx", "wb") as f:
+    f.write(onnx_model.SerializeToString())
